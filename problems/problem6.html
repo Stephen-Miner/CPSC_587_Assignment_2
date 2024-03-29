@@ -20,12 +20,105 @@
 </head>
 <body>
 <script type="module">
-    import {ThreeEngine} from "../js/utils/utils_three.js";
+    import {get_default_lil_gui, ThreeEngine, refresh_displays} from "../js/utils/utils_three.js";
+    import {mul_matrix_matrix, mul_matrix_scalar, transpose, add_matrix_matrix, sub_matrix_matrix} from "../js/utils/utils_math.js";
 
     // todo: recreate this visualization, demonstrating your understanding of displacement-based distance in SE(2)
     // todo: https://yale-cpsc-487-587-internal-djrakita-c95fa6c3239a481a48d29a6b0fd.gitlab.io/html/visualizations/SE2_distance2.html
     // todo: make sure you are using the displacement-based distance!
     // todo: or, feel free to come up with any visualization here that demonstrates your understanding of SE(2) distance
+
+    let engine = ThreeEngine.new_default_2d();
+    //engine.add_standard2Dshape_as_mesh_object(0x00eeff);
+
+    let gui = get_default_lil_gui();
+    //let standard_points = engine.get_local_vertex_positions_of_mesh_object(0);
+    //let wireframe_points = engine.get_local_vertex_positions_of_mesh_object_wireframe(0);
+
+    let settings = {
+        draw_points : true,
+        draw_wireframe: true,
+        draw_mesh : false,
+        point_size: 0.02,
+        theta: 0.0,
+        tx: 0.0,
+        ty: 0.0,
+        tx_2: 0.0,
+        ty_2: 0.0,
+        theta_2: 0.0,
+        dis: 0.0
+    };
+
+    let actions = {
+        reset: function() {
+            settings.theta = 0.0;
+            settings.tx = 0.0;
+            settings.ty = 0.0;
+            refresh_displays(gui);
+        },
+        reset_2: function() {
+            settings.theta_2 = 0.0;
+            settings.tx_2 = 0.0;
+            settings.ty_2 = 0.0;
+            refresh_displays(gui);
+        }
+    };
+
+    gui.add(settings, 'theta', -2*Math.PI, 2*Math.PI).name("Theta1");
+    gui.add(settings, 'tx', -2.0, 2.0).name("tx1");
+    gui.add(settings, 'ty', -2.0, 2.0).name("ty1");
+    gui.add(actions, 'reset').name("reset1");
+    gui.add(settings, 'theta_2', -2*Math.PI, 2*Math.PI).name("Theta2");
+    gui.add(settings, 'tx_2', -2.0, 2.0).name("tx2");
+    gui.add(settings, 'ty_2', -2.0, 2.0).name("ty2");
+    gui.add(actions, 'reset_2').name("reset2");
+    gui.add(settings, 'dis').name("disp based dis");
+
+    function calculate_disp_dist(m1,m2) {
+
+        let t1_new = mul_matrix_matrix(mul_matrix_scalar(transpose(m1), -1), [[settings.tx],[settings.ty]]);
+        let t = add_matrix_matrix(mul_matrix_matrix(transpose(m1), [[settings.tx_2],[settings.ty_2]]), t1_new);
+        let disp_a_b = mul_matrix_matrix(transpose(m1), m2);
+
+        let a1 = Math.atan2(disp_a_b[1][0], disp_a_b[0][0]);
+
+        let p = 0.0;
+        let q = 0.0;
+        if(Math.abs(a1) < 0.0001) {
+            p = 1 - (Math.pow(a1, 2) / 6.0) + (Math.pow(a1, 4) / 120);
+            q = (a1 / 2) - (Math.pow(a1, 3) / 24.0) + (Math.pow(a1, 5) / 720.0)
+        }
+        else {
+            p = (Math.sin(a1)) / (a1);
+            q = (1 - Math.cos(a1)) / (a1);
+        }
+
+        let a2_a3 = mul_matrix_matrix(mul_matrix_scalar([ [p, q], [-q, p] ], (1.0 / (Math.pow(p,2) + Math.pow(q, 2)))), t);
+        let a2 = a2_a3[0][0];
+        let a3 = a2_a3[1][0];
+        return Math.sqrt(Math.pow(a1, 2) + Math.pow(a2, 2) + Math.pow(a3, 2));
+    }
+
+    engine.animation_loop(() => {
+        let m1 = [[Math.cos(settings.theta), -1 * Math.sin(settings.theta)], [Math.sin(settings.theta), Math.cos(settings.theta)]];
+        let m2 = [[Math.cos(settings.theta_2), -1 * Math.sin(settings.theta_2)], [Math.sin(settings.theta_2), Math.cos(settings.theta_2)]];
+
+        let new_origin_1 = add_matrix_matrix((mul_matrix_matrix(m1,[[0],[0]])), [[settings.tx],[settings.ty]]).flat();
+        let new_end_1_1 = add_matrix_matrix((mul_matrix_matrix(m1,[[1],[0]])), [[settings.tx],[settings.ty]]).flat();
+        let new_end_1_2 = add_matrix_matrix((mul_matrix_matrix(m1,[[0],[1]])), [[settings.tx],[settings.ty]]).flat();
+        engine.draw_debug_vector(new_origin_1, new_end_1_1, 0.035, undefined, 0xff3333);
+        engine.draw_debug_vector(new_origin_1, new_end_1_2, 0.035, undefined, 0x33ff33);
+
+        let new_origin_2 = add_matrix_matrix((mul_matrix_matrix(m2,[[0],[0]])), [[settings.tx_2],[settings.ty_2]]).flat();
+        let new_end_2_1 = add_matrix_matrix((mul_matrix_matrix(m2,[[1],[0]])), [[settings.tx_2],[settings.ty_2]]).flat();
+        let new_end_2_2 = add_matrix_matrix((mul_matrix_matrix(m2,[[0],[1]])), [[settings.tx_2],[settings.ty_2]]).flat();
+        engine.draw_debug_vector(new_origin_2, new_end_2_1, 0.035, undefined, 0xff3333);
+        engine.draw_debug_vector(new_origin_2, new_end_2_2, 0.035, undefined, 0x33ff33);
+
+        settings.dis = calculate_disp_dist(m1,m2);
+        refresh_displays(gui);
+    });
+
 
 </script>
 </body>
