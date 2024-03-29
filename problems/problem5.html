@@ -60,8 +60,8 @@
     gui.add(settings, 'draw_mesh').name("Draw Mesh");
     gui.add(settings, 'point_size', 0.001, 0.03).name("Point Size");
     let folder = gui.addFolder('Isometry Controls');
-    folder.add(settings, 'tx', -2.0, 2.0).name("x").name("Translation x");
-    folder.add(settings, 'ty', -2.0, 2.0).name("y").name("Translation y");
+    folder.add(settings, 'tx', -2.0, 2.0).name("Translation x");
+    folder.add(settings, 'ty', -2.0, 2.0).name("Translation y");
     folder.add(settings, 'theta', -Math.PI, Math.PI).name("Rotation angle");
     folder.add(actions, 'reset').name("Reset");
 
